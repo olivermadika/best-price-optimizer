@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Best Price Optimizer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#ffffff; --bg2:#f5f5f3; --bg3:#ebebea;
+    --txt:#1a1a18; --txt2:#5f5e5a; --txt3:#888780;
+    --brd:rgba(0,0,0,0.10); --brd2:rgba(0,0,0,0.18);
+    --green-bg:#eaf3de; --green-txt:#3b6d11;
+    --red-bg:#fcebeb;   --red-txt:#a32d2d;
+    --amber-bg:#faeeda; --amber-txt:#854f0b;
+    --blue-bg:#e6f1fb;  --blue-txt:#185fa5;
+    --font:'Sora',sans-serif; --mono:'DM Mono',monospace;
+    --rmd:8px; --rlg:12px;
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#1e1e1c; --bg2:#2a2a28; --bg3:#323230;
+    --txt:#f0efe8; --txt2:#b4b2a9; --txt3:#888780;
+    --brd:rgba(255,255,255,0.10); --brd2:rgba(255,255,255,0.18);
+    --green-bg:#173404; --green-txt:#c0dd97;
+    --red-bg:#501313;   --red-txt:#f09595;
+    --amber-bg:#412402; --amber-txt:#fac775;
+    --blue-bg:#042c53;  --blue-txt:#85b7eb;
+  }}
+  body{font-family:var(--font);background:var(--bg3);color:var(--txt);min-height:100vh;padding:1.5rem;}
+  .app{max-width:1300px;margin:0 auto;}
+
+  /* HEADER */
+  .header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;flex-wrap:wrap;gap:12px;}
+  .header-left h1{font-size:22px;font-weight:600;letter-spacing:-0.3px;}
+  .header-left p{font-size:12px;color:var(--txt3);margin-top:3px;font-family:var(--mono);}
+  .header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:var(--mono);padding:4px 12px;border-radius:20px;font-weight:500;}
+  .badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+  .badge-live    {background:var(--green-bg);color:var(--green-txt);}
+  .badge-fallback{background:var(--amber-bg);color:var(--amber-txt);}
+  .badge-loading {background:var(--blue-bg); color:var(--blue-txt);}
+  .badge-loading::before{animation:blink 1s infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0.25}}
+  .sku-count{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-family:var(--mono);padding:4px 12px;border-radius:20px;background:var(--bg);border:0.5px solid var(--brd2);color:var(--txt2);}
+  .sync-time{font-size:11px;font-family:var(--mono);color:var(--txt3);}
+
+  /* SHEETS BAR */
+  .sheets-bar{background:var(--bg);border:0.5px solid var(--brd2);border-radius:var(--rlg);padding:12px 16px;margin-bottom:1.25rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .sheets-bar label{font-size:11px;font-family:var(--mono);color:var(--txt2);white-space:nowrap;}
+  .sheets-input{flex:1;min-width:260px;font-family:var(--mono);font-size:11px;padding:6px 10px;border-radius:var(--rmd);border:0.5px solid var(--brd2);background:var(--bg2);color:var(--txt);outline:none;}
+  .sheets-input:focus{border-color:var(--blue-txt);box-shadow:0 0 0 2px rgba(24,95,165,0.12);}
+  .btn{font-family:var(--mono);font-size:11px;padding:6px 14px;border-radius:var(--rmd);border:0.5px solid var(--brd2);background:var(--bg);color:var(--txt2);cursor:pointer;white-space:nowrap;transition:background 0.15s;}
+  .btn:hover{background:var(--bg2);}
+  .btn-primary{background:var(--blue-txt);color:#fff;border-color:var(--blue-txt);}
+  .btn-primary:hover{opacity:0.88;background:var(--blue-txt);}
+  .sheets-hint{font-size:10px;font-family:var(--mono);color:var(--txt3);flex-basis:100%;line-height:1.6;}
+  .sheets-hint a{color:var(--blue-txt);text-decoration:none;}
+  .sheets-hint a:hover{text-decoration:underline;}
+  .sheets-hint strong{font-weight:500;color:var(--txt2);}
+  code{font-family:var(--mono);font-size:10.5px;background:var(--bg2);padding:1px 5px;border-radius:4px;color:var(--blue-txt);}
+
+  /* METRICS */
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem;}
+  @media(max-width:640px){.metrics{grid-template-columns:repeat(2,1fr);}}
+  .metric-card{background:var(--bg);border-radius:var(--rlg);padding:14px 16px;border:0.5px solid var(--brd);}
+  .metric-label{font-size:10px;color:var(--txt3);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;}
+  .metric-value{font-size:24px;font-weight:600;letter-spacing:-0.5px;line-height:1;}
+  .metric-sub{font-size:11px;color:var(--txt3);margin-top:5px;font-family:var(--mono);}
+  .metric-green .metric-value{color:var(--green-txt);}
+  .metric-blue  .metric-value{color:var(--blue-txt);}
+  .metric-amber .metric-value{color:var(--amber-txt);}
+  .metric-red   .metric-value{color:var(--red-txt);}
+
+  /* CONTROLS */
+  .controls{display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;align-items:center;}
+  .filter-group{display:flex;gap:6px;flex-wrap:wrap;flex:1;}
+  .filter-btn{font-size:11px;font-family:var(--mono);padding:4px 11px;border-radius:20px;border:0.5px solid var(--brd2);background:var(--bg);color:var(--txt2);cursor:pointer;transition:all 0.15s;}
+  .filter-btn:hover{background:var(--bg2);}
+  .filter-btn.active{background:var(--txt);color:var(--bg);border-color:var(--txt);}
+  .search-box{font-family:var(--mono);font-size:12px;padding:7px 13px;border-radius:var(--rmd);border:0.5px solid var(--brd2);background:var(--bg);color:var(--txt);width:230px;outline:none;}
+  .search-box:focus{border-color:var(--blue-txt);box-shadow:0 0 0 2px rgba(24,95,165,0.12);}
+
+  /* TABLE */
+  .table-wrap{overflow-x:auto;border:0.5px solid var(--brd);border-radius:var(--rlg);background:var(--bg);}
+  table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;min-width:1020px;}
+  thead th{padding:10px 12px;text-align:left;font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:0.5px;color:var(--txt3);font-weight:500;border-bottom:0.5px solid var(--brd);background:var(--bg2);white-space:nowrap;cursor:pointer;user-select:none;}
+  thead th:hover{color:var(--txt2);}
+  thead th.sort-asc::after{content:' ↑';}
+  thead th.sort-desc::after{content:' ↓';}
+  tbody tr{border-bottom:0.5px solid var(--brd);transition:background 0.1s;}
+  tbody tr:last-child{border-bottom:none;}
+  tbody tr:hover{background:var(--bg2);}
+  td{padding:9px 12px;color:var(--txt);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  td.name-cell{font-size:11px;white-space:normal;line-height:1.4;}
+  td.num{text-align:right;font-family:var(--mono);}
+  .col-id    {width:44px;} .col-name {width:165px;} .col-cat  {width:110px;}
+  .col-date  {width:78px;} .col-cogs {width:76px;} .col-comp {width:68px;}
+  .col-avg   {width:76px;} .col-best {width:80px;} .col-margin{width:62px;} .col-st{width:88px;}
+  .src-dot{display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:5px;vertical-align:middle;flex-shrink:0;}
+  .src-live{background:var(--green-txt);}
+  .src-sim {background:var(--amber-txt);}
+  .status-pill{display:inline-block;font-size:10px;font-family:var(--mono);font-weight:500;padding:2px 8px;border-radius:20px;white-space:nowrap;}
+  .pill-opt {background:var(--green-bg);color:var(--green-txt);}
+  .pill-low {background:var(--red-bg);  color:var(--red-txt);}
+  .pill-over{background:var(--amber-bg);color:var(--amber-txt);}
+  .best-price{font-family:var(--mono);font-weight:500;color:var(--blue-txt);}
+
+  /* PAGINATION */
+  .pagination{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-top:0.5px solid var(--brd);font-size:12px;color:var(--txt3);font-family:var(--mono);flex-wrap:wrap;gap:6px;}
+  .page-btns{display:flex;gap:4px;flex-wrap:wrap;}
+  .page-btn{padding:4px 10px;border-radius:6px;border:0.5px solid var(--brd2);background:var(--bg);cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--txt2);}
+  .page-btn:hover{background:var(--bg2);}
+  .page-btn.active{background:var(--txt);color:var(--bg);border-color:var(--txt);}
+
+  /* BOTTOM CHARTS */
+  .chart-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:1rem;}
+  @media(max-width:640px){.chart-row{grid-template-columns:1fr;}}
+  .chart-card{background:var(--bg);border:0.5px solid var(--brd);border-radius:var(--rlg);padding:14px 16px;}
+  .chart-title{font-size:11px;color:var(--txt2);font-family:var(--mono);margin-bottom:14px;text-transform:uppercase;letter-spacing:0.5px;}
+  .cat-bar{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+  .cat-name{font-size:10px;font-family:var(--mono);color:var(--txt2);width:130px;flex-shrink:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cat-track{flex:1;background:var(--bg2);border-radius:4px;height:6px;overflow:hidden;}
+  .cat-fill{height:100%;border-radius:4px;transition:width 0.4s ease;}
+  .cat-val{font-size:10px;font-family:var(--mono);color:var(--txt3);width:42px;text-align:right;}
+  .cat-count{font-size:10px;font-family:var(--mono);color:var(--txt3);width:50px;white-space:nowrap;}
+  .empty{text-align:center;padding:2.5rem;color:var(--txt3);font-family:var(--mono);font-size:13px;}
+  .footer{text-align:center;margin-top:1.5rem;font-size:11px;font-family:var(--mono);color:var(--txt3);}
+
+  /* MODAL */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--bg);border-radius:var(--rlg);border:0.5px solid var(--brd2);padding:24px 28px;max-width:620px;width:93%;max-height:84vh;overflow-y:auto;}
+  .modal h2{font-size:16px;font-weight:600;margin-bottom:8px;}
+  .modal p,.modal li{font-size:13px;color:var(--txt2);line-height:1.7;}
+  .modal ol{padding-left:1.3rem;margin:8px 0 14px;}
+  .modal ol li{margin-bottom:6px;}
+  .modal h3{font-size:13px;font-weight:600;margin:14px 0 6px;color:var(--txt);}
+  .schema-table{width:100%;border-collapse:collapse;font-size:11px;font-family:var(--mono);margin:8px 0 14px;}
+  .schema-table th{background:var(--bg2);padding:6px 10px;text-align:left;color:var(--txt3);font-weight:500;border:0.5px solid var(--brd);}
+  .schema-table td{padding:5px 10px;border:0.5px solid var(--brd);color:var(--txt2);}
+  .schema-table tr:nth-child(even) td{background:var(--bg2);}
+  .schema-table .req{color:var(--red-txt);font-weight:500;}
+  .schema-table .opt{color:var(--txt3);}
+  .tip-box{background:var(--blue-bg);border-radius:var(--rmd);padding:10px 14px;margin-top:10px;font-size:12px;color:var(--blue-txt);font-family:var(--mono);line-height:1.6;}
+  .example-row{font-family:var(--mono);font-size:10px;background:var(--bg2);border-radius:var(--rmd);padding:10px 12px;margin:8px 0;color:var(--txt2);overflow-x:auto;white-space:pre;}
+
+  /* DOWNLOAD BAR */
+  .dl-bar{display:flex;align-items:center;gap:8px;margin-bottom:0.75rem;flex-wrap:wrap;}
+  .dl-label{font-size:10px;font-family:var(--mono);color:var(--txt3);white-space:nowrap;}
+  .dl-scope{display:flex;border:0.5px solid var(--brd2);border-radius:var(--rmd);overflow:hidden;}
+  .dl-scope button{padding:4px 11px;font-family:var(--mono);font-size:10px;background:var(--bg);color:var(--txt3);border:none;cursor:pointer;transition:background 0.12s;}
+  .dl-scope button:hover{background:var(--bg2);}
+  .dl-scope button.active{background:var(--txt);color:var(--bg);}
+  .dl-sep{width:0.5px;background:var(--brd2);}
+  .btn-dl{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:11px;padding:5px 13px;border-radius:var(--rmd);border:0.5px solid var(--brd2);background:var(--bg);cursor:pointer;transition:all 0.15s;white-space:nowrap;font-weight:500;}
+  .btn-dl svg{width:12px;height:12px;flex-shrink:0;}
+  .btn-dl-csv{border-color:#1D9E75;color:#1D9E75;}
+  .btn-dl-csv:hover{background:var(--green-bg);}
+  .btn-dl-xlsx{border-color:#185fa5;color:#185fa5;}
+  .btn-dl-xlsx:hover{background:var(--blue-bg);}
+  .dl-info{font-size:10px;font-family:var(--mono);color:var(--txt3);}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <h1>Best Price Optimizer</h1>
+      <p>Price Intelligence Dashboard · Retail Internal Tools</p>
+    </div>
+    <div class="header-right">
+      <span id="sync-time" class="sync-time"></span>
+      <span id="data-badge" class="badge badge-loading">Memuat…</span>
+      <span class="sku-count"><span id="total-sku">0</span>&nbsp;SKUs</span>
+    </div>
+  </div>
+
+  <!-- GOOGLE SHEETS SYNC BAR -->
+  <div class="sheets-bar">
+    <label>Google Sheets URL:</label>
+    <input class="sheets-input" id="sheets-url" type="text"
+      placeholder="Paste Published CSV URL dari Google Sheets Anda…" />
+    <button class="btn btn-primary" onclick="loadFromSheets()">Sync Sekarang</button>
+    <button class="btn" onclick="openGuide()">Cara Setup &amp; Template</button>
+    <div class="sheets-hint">
+      Buka Google Sheets → <strong>File → Share → Publish to web</strong> → pilih sheet, format <strong>CSV</strong> → Copy link.
+      Kolom wajib: <code>Tgl_Update</code> <code>SKU_Number</code> <code>Shopee</code> <code>Tokopedia</code> <code>Blibli</code> <code>Alfamart_Indomart</code>
+      &nbsp;·&nbsp;<a href="#" onclick="openGuide();return false;">Lihat panduan &amp; template kolom →</a>
+    </div>
+  </div>
+
+  <!-- METRICS -->
+  <div class="metrics">
+    <div class="metric-card metric-green">
+      <div class="metric-label">Avg Margin</div>
+      <div class="metric-value" id="m-margin">—</div>
+      <div class="metric-sub">Best Price margin</div>
+    </div>
+    <div class="metric-card metric-blue">
+      <div class="metric-label">Optimized</div>
+      <div class="metric-value" id="m-optimized">—</div>
+      <div class="metric-sub">SKUs on target</div>
+    </div>
+    <div class="metric-card metric-amber">
+      <div class="metric-label">Overpriced</div>
+      <div class="metric-value" id="m-overpriced">—</div>
+      <div class="metric-sub">Margin capped 70%</div>
+    </div>
+    <div class="metric-card metric-red">
+      <div class="metric-label">Low Margin</div>
+      <div class="metric-value" id="m-low">—</div>
+      <div class="metric-sub">Margin floored 5%</div>
+    </div>
+  </div>
+
+  <!-- FILTERS + SEARCH -->
+  <div class="controls">
+    <div class="filter-group" id="filter-btns"></div>
+    <input class="search-box" id="search" placeholder="Cari nama produk / SKU…" />
+  </div>
+
+  <!-- DOWNLOAD BAR -->
+  <div class="dl-bar">
+    <span class="dl-label">Unduh data:</span>
+    <div class="dl-scope">
+      <button id="scope-all" class="active" onclick="setScope('all')">Semua SKU</button>
+      <div class="dl-sep"></div>
+      <button id="scope-filter" onclick="setScope('filter')">Hasil Filter</button>
+    </div>
+    <button class="btn-dl btn-dl-csv" onclick="downloadCSV()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M8 2v8M5 7l3 3 3-3M3 12h10" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Download CSV
+    </button>
+    <button class="btn-dl btn-dl-xlsx" onclick="downloadXLSX()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M8 2v8M5 7l3 3 3-3M3 12h10" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Download XLSX
+    </button>
+    <span class="dl-info" id="dl-info"></span>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th class="col-id"     onclick="sortBy('id')"      id="th-id">ID</th>
+        <th class="col-name"   onclick="sortBy('name')"    id="th-name">Produk</th>
+        <th class="col-cat"    onclick="sortBy('cat')"     id="th-cat">Kategori</th>
+        <th class="col-date"   onclick="sortBy('tgl')"     id="th-tgl">Tgl Update</th>
+        <th class="col-cogs num" onclick="sortBy('cogs')"  id="th-cogs">COGS</th>
+        <th class="col-comp num" onclick="sortBy('shopee')" id="th-shopee">Shopee</th>
+        <th class="col-comp num" onclick="sortBy('tokped')" id="th-tokped">Tokped</th>
+        <th class="col-comp num" onclick="sortBy('blibli')" id="th-blibli">Blibli</th>
+        <th class="col-comp num" onclick="sortBy('alfa')"   id="th-alfa">Alfamart</th>
+        <th class="col-avg num"  onclick="sortBy('avg')"    id="th-avg">Avg Pasar</th>
+        <th class="col-best num" onclick="sortBy('best')"   id="th-best">Best Price</th>
+        <th class="col-margin num" onclick="sortBy('margin')" id="th-margin">Margin</th>
+        <th class="col-st"     onclick="sortBy('status')"  id="th-status">Status</th>
+      </tr></thead>
+      <tbody id="tbl-body"></tbody>
+    </table>
+    <div class="pagination" id="pager"></div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="chart-row">
+    <div class="chart-card">
+      <div class="chart-title">Status SKU</div>
+      <div style="position:relative;height:210px;">
+        <canvas id="chart-status" role="img" aria-label="Donut chart status SKU: optimized, overpriced, low margin"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Avg Margin per Kategori</div>
+      <div id="cat-bars" style="padding-top:2px;"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Best Price Optimizer · Internal Retail Tool ·
+    <span id="footer-src">Data simulasi harga kompetitor (belum terhubung ke Sheets)</span>
+  </div>
+</div>
+
+<!-- MODAL: SETUP GUIDE & TEMPLATE -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeGuide()">
+  <div class="modal">
+    <h2>Setup Google Sheets Sync</h2>
+    <p>Dashboard membaca harga kompetitor dari Google Sheets secara langsung. SKU yang ada di Sheets akan otomatis menggantikan data simulasi. SKU yang tidak ada di Sheets tetap menggunakan simulasi sebagai fallback.</p>
+
+    <h3>Struktur Kolom Google Sheets</h3>
+    <p>Buat sheet baru bernama <code>harga_kompetitor</code> dengan header persis seperti berikut:</p>
+    <table class="schema-table">
+      <tr><th>Kolom</th><th>Tipe Data</th><th>Contoh</th><th>Status</th></tr>
+      <tr><td>Tgl_Update</td><td>text / date</td><td>21 Apr 26</td><td><span class="req">Wajib</span></td></tr>
+      <tr><td>Product_ID</td><td>angka</td><td>26</td><td><span class="opt">Opsional</span></td></tr>
+      <tr><td>SKU_Number</td><td>text/angka</td><td>8886008101053</td><td><span class="req">Wajib</span></td></tr>
+      <tr><td>Product_Name</td><td>text</td><td>AQUA Air Mineral 600ml</td><td><span class="opt">Opsional</span></td></tr>
+      <tr><td>l1_cat_name</td><td>text</td><td>Minuman</td><td><span class="opt">Opsional</span></td></tr>
+      <tr><td>COGS_Blended</td><td>angka</td><td>2451</td><td><span class="opt">Opsional — override COGS</span></td></tr>
+      <tr><td>Shopee</td><td>angka</td><td>3500</td><td><span class="req">Wajib</span></td></tr>
+      <tr><td>Tokopedia</td><td>angka</td><td>3200</td><td><span class="req">Wajib</span></td></tr>
+      <tr><td>Blibli</td><td>angka</td><td>3800</td><td><span class="req">Wajib</span></td></tr>
+      <tr><td>Alfamart_Indomart</td><td>angka</td><td>3000</td><td><span class="req">Wajib</span></td></tr>
+    </table>
+
+    <h3>Contoh Baris Data</h3>
+    <div class="example-row">Tgl_Update  | SKU_Number    | Shopee | Tokopedia | Blibli | Alfamart_Indomart
+21 Apr 26   | 8886008101053 | 3500   | 3200      | 3800   | 3000
+21 Apr 26   | 8997035563414 | 7500   | 7200      | 7800   | 7000</div>
+
+    <h3>Cara Publish ke Web</h3>
+    <ol>
+      <li>Buka Google Sheets → klik menu <strong>File</strong> → <strong>Share</strong> → <strong>Publish to web</strong>.</li>
+      <li>Di dropdown pertama pilih sheet <code>harga_kompetitor</code>.</li>
+      <li>Di dropdown kedua pilih <strong>Comma-separated values (.csv)</strong>.</li>
+      <li>Klik tombol <strong>Publish</strong>, konfirmasi, lalu <strong>copy URL</strong> yang muncul.</li>
+      <li>Paste URL di kolom input di dashboard, klik <strong>Sync Sekarang</strong>.</li>
+    </ol>
+
+    <h3>Logika Harga Otomatis</h3>
+    <p>Dashboard menghitung Best Price dengan urutan prioritas berikut:</p>
+    <ol>
+      <li><strong>Target Price</strong> = Rata-rata harga pasar (Shopee+Tokped+Blibli+Alfamart) × 1.05</li>
+      <li>Jika margin &lt; 5% → Best Price dinaikkan ke margin minimum 5% dari COGS</li>
+      <li>Jika margin &gt; 70% → Best Price diturunkan ke margin maksimum 70% dari COGS</li>
+    </ol>
+
+    <div class="tip-box">
+      Titik hijau (●) di tabel = harga real dari Google Sheets · Titik kuning (●) = harga simulasi.
+      URL Sheets disimpan otomatis di browser — tidak perlu paste ulang setiap buka dashboard.
+      Update harga di Sheets kapan saja, lalu klik Sync Sekarang untuk refresh.
+    </div>
+    <button class="btn" style="margin-top:16px;" onclick="closeGuide()">Tutup</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════
+   BASE DATA — 120 SKU real dari Best_Price_Optimizer.csv
+   Format: [Product_ID, SKU_Number, Product_Name, l1_cat_name, Tgl_Update, COGS_Blended]
+═══════════════════════════════════════════════════════ */
+const BASE = [
+  [2,"8995227500278","Larutan Cap Kaki Tiga Leci 320 ml","Minuman","21 Apr 26",5254],
+  [7,"8992696407039","Dancow Madu 3-5 Thn Advanced Excelnutri/Susu Formula 350 gram","Makanan & Susu Bayi","21 Apr 26",38706],
+  [13,"4891338007962","Darlie Double Action Mint Toothpaste 225 gram","Perawatan Mulut","21 Apr 26",29058],
+  [16,"8992727005159","Men's Biore Acne Bright Care Gentle Facial Foam 100 gram","Kebersihan Wajah","21 Apr 26",27611],
+  [24,"8995227501022","Larutan Cap Kaki Tiga Anak Tawar 200 ml","Minuman","21 Apr 26",3233],
+  [26,"8886008101053","AQUA Air Mineral Botol 600 ml","Minuman","21 Apr 26",2451],
+  [28,"9556085302757","Hup Seng Cream Crackers 428 gram","Biskuit","21 Apr 26",24593],
+  [35,"8992696407671","Dancow Advanced Excelnutri Vanilla 1-3 Tahun Susu Formula 350 gram","Makanan & Susu Bayi","21 Apr 26",40056],
+  [36,"4901301324368","Magiclean Wiper Fresh Mint Refill Wet Sheet 8 Sheets","Tata Rumah","21 Apr 26",33838],
+  [37,"8997015494004","Green Valley Grated Parmesan Cheese 80 gram","Susu & Olahan Susu","21 Apr 26",43457],
+  [42,"8992907952136","Sari Roti Tawar Kupas 200 gram","Sarapan","21 Apr 26",13500],
+  [55,"711844130111","ABC Saus Tomat 130 ml","Bahan Masak & Bumbu","21 Apr 26",7842],
+  [59,"7394376618239","Oatly Oat Milk Chocolate Diary Free 1000 ml","Minuman","21 Apr 26",47197],
+  [64,"708046","Kardus Polos Packing Small 20x10x8cm 1 pcs","Tata Rumah","21 Apr 26",944],
+  [83,"701661","Cap Dua Mujair Bihun Medan 300 gram","Kebutuhan Pokok","21 Apr 26",10822],
+  [85,"9556031206047","Palmolive Naturals Orchid Body Wash Bottle Pump 1 Liter","Kebersihan Badan","21 Apr 26",87399],
+  [87,"8850096818506","Blue Diamond Almond Breeze Original Milk 946 ml","Susu & Olahan Susu","21 Apr 26",47935],
+  [100,"8993200666935","Cimory Squeeze Original Yogurt 120 ml","Susu & Olahan Susu","21 Apr 26",10091],
+  [104,"37600596626","Hormel Spam Classic 340 gram","Bahan Masak & Bumbu","21 Apr 26",89355],
+  [105,"8992695120205","Panadol Cold & Flu Obat Flu dan Hidung Tersumbat Strip 10 Kaplet","Obat-obatan","21 Apr 26",15736],
+  [109,"8997032680275","Taro Net Seaweed 62 gram","Snack","21 Apr 26",7944],
+  [112,"8991038111757","Selection Square Facial Cotton 75 gram","Perawatan Diri","21 Apr 26",11484],
+  [116,"8992779068409","Glade 3in1 Clean Fresh Surface Disinfectant & Air Sanitizer 400 ml","Alat Kesehatan","21 Apr 26",24611],
+  [117,"241877","Bakso Warisan Ibu Sapi Urat 10 pcs 200 gram","Makanan Beku","21 Apr 26",59127],
+  [121,"7640129898466","Mazola Minyak Kanola 450 ml","Kebutuhan Pokok","21 Apr 26",53280],
+  [126,"89686060461","Pop Mie Lapeer Kuah Kari Ayam Mie Instan Cup 75 gram","Kebutuhan Pokok","21 Apr 26",4165],
+  [128,"8992907952631","Sari Roti Tawar Double Soft 340 gram","Sarapan","21 Apr 26",14250],
+  [143,"8999999035624","Walls Magnum Mini Classic 270 ml","Es Krim","21 Apr 26",43380],
+  [149,"8998899940489","Kiwi Shine & Protect Black Shoe Polish Cair 75 ml","Perlengkapan Pakaian","21 Apr 26",40381],
+  [152,"282006","Jamur Shitake Kering 250 gram","Bahan Masak & Bumbu","21 Apr 26",55497],
+  [153,"8992696407695","Dancow Advanced Excelnutri Vanilla 3-5 Tahun Susu Formula 350 gram","Makanan & Susu Bayi","21 Apr 26",38512],
+  [156,"8993988345183","Joyko Gunting Kecil SC- 828 12cm 1 pcs","Alat Tulis Kantor","21 Apr 26",4399],
+  [157,"8997009510123","YOU-C 1000 Orange Water 500 ml","Minuman","21 Apr 26",6795],
+  [166,"8999999042608","Rinso Anti Noda Essence Deterjen Cair 700 ml","Kebutuhan Cuci Baju","21 Apr 26",16077],
+  [174,"8997009510017","YOU-C 1000 Lemon 140 ml","Minuman","21 Apr 26",5784],
+  [178,"8993560033347","Vanish Powder Oxi Action Penghilang Noda 400 gram","Kebutuhan Cuci Baju","21 Apr 26",44916],
+  [181,"8999777016142","Hansaplast Kain Elastis Plester Luka 20 Sheets","Alat Kesehatan","21 Apr 26",11985],
+  [182,"8991111152059","Mylanta Sirup Obat Maag 50 ml","Obat-obatan","21 Apr 26",15850],
+  [183,"8999777850616","NIVEA Original Lip Balm 4 gram","Make Up","21 Apr 26",28827],
+  [191,"8992696415058","Dancow Advanced Excelnutri Vanilla 5-7 Tahun Susu Formula 350 gram","Makanan & Susu Bayi","21 Apr 26",38123],
+  [199,"711844140417","ABC Minyak Wijen 195 ml","Bahan Masak & Bumbu","21 Apr 26",50758],
+  [208,"8998899995090","Baygon Aerosol Flower Garden Pembasmi Serangga 600 ml","Perawatan Rumah","21 Apr 26",38577],
+  [209,"95506296","Strepsils Original Permen Pereda Sakit Tenggorokan 8 Butir","Obat-obatan","21 Apr 26",15095],
+  [210,"8995227500124","Larutan Cap Kaki Tiga 200 ml","Minuman","21 Apr 26",3173],
+  [214,"8992779248504","Mr Muscle Pembersih Kamar Mandi Spray 500 ml","Perawatan Rumah","21 Apr 26",21263],
+  [225,"8991038775171","Selection Round Facial Cotton 80 pcs","Perawatan Diri","21 Apr 26",13584],
+  [228,"6901482849283","Lo Han Kuo Infusion Pereda Panas Dalam 168 gram","Obat-obatan","21 Apr 26",21090],
+  [233,"8994993019656","Garnier For Oily & Acne Prone Skin Micellar Cleansing Water 125 ml","Make Up","21 Apr 26",29915],
+  [234,"70177010775","Twinings English Breakfast Tea Celup 25 Bags","Sarapan","21 Apr 26",80473],
+  [248,"4901301508843","Merries Tape Diapers NB24 1 Pack","Kebutuhan Ibu & Bayi","21 Apr 26",68642],
+  [251,"8992727005166","Men's Biore Pore Pack Black 4 Sheets","Skincare","21 Apr 26",10914],
+  [255,"4902750411517","UHA Kororo Strawberry Permen Jeli 40 gram","Permen","21 Apr 26",10932],
+  [258,"8999999008062","Pepsodent Nano Soft Sensitive Toothbrush 3 pcs","Perawatan Mulut","21 Apr 26",28051],
+  [259,"864849","Becom-Zet Multivitamin dan Mineral Zinc Strip 10 Tablet","Vitamin","21 Apr 26",29697],
+  [263,"3161911364531","Elle & Vire Unsalted Butter Packed 200 gram","Susu & Olahan Susu","21 Apr 26",72150],
+  [264,"8998898842104","Sido Muncul Vitamin C 1000 Serbuk Lemon Suplemen Daya Tahan Tubuh 6 Sachets","Vitamin","21 Apr 26",7434],
+  [271,"8992001033243","Vitalong C Vitamin C 500mg 30 Kapsul","Vitamin","21 Apr 26",38795],
+  [276,"7394376619533","Oatly Oat Milk Barista Dairy Free 1000 ml","Susu & Olahan Susu","21 Apr 26",47197],
+  [281,"8992003782453","OB Herbal Plus Madu Sirup Obat Batuk Herbal 60 ml","Obat-obatan","21 Apr 26",14148],
+  [285,"8993560027780","Dettol Original Antibacterial Hand Wash 400 ml","Kebersihan Badan","21 Apr 26",31049],
+  [295,"4710363035972","Attack Hygiene Plus Deterjen Cair 750 ml","Kebutuhan Cuci Baju","21 Apr 26",25737],
+  [296,"447572","Naga Prima Kerupuk Bawang Warna Warni 500 gram","Bahan Masak & Bumbu","21 Apr 26",12210],
+  [307,"8992727001793","Men's Biore Cool Energy Body Foam Pouch 400 ml","Kebersihan Badan","21 Apr 26",24800],
+  [331,"8999777004163","Nivea Extra Bright Radiant & Smooth Deodorant Roll On 50 ml","Perawatan Diri","21 Apr 26",20668],
+  [336,"3161911393210","Elle & Vire Salted Butter 200 gram","Susu & Olahan Susu","21 Apr 26",72150],
+  [340,"8993053121407","Paseo Smart Facial Tissue Soft Pack 540 Ply","Perawatan Rumah","21 Apr 26",9617],
+  [355,"7499221164173","Heavenly Blush Greek Yogurt Granola 100 gram","Susu & Olahan Susu","21 Apr 26",23310],
+  [356,"798111","Ny. Lily Sambal Asli Lampung 350 gram","Bahan Masak & Bumbu","21 Apr 26",32745],
+  [361,"8997035563414","Pocari Sweat Minuman Isotonik Botol 500 ml","Minuman","21 Apr 26",6494],
+  [364,"9329401000305","Pure Paw Paw Ointment - Krim Gel Multifungsi 25 gram","Obat-obatan","21 Apr 26",56956],
+  [365,"8000500227848","Nutella B-Ready Wafer 6 pcs 132 gram","Biskuit","21 Apr 26",44067],
+  [392,"383741","Joyko Double Tape 12mm x 13m 1 pcs","Alat Tulis Kantor","21 Apr 26",2450],
+  [399,"3516663670001","Fermipan Ragi Instan Pengembang 44 gram","Tepung & Bahan Kue","21 Apr 26",19304],
+  [400,"641072","Joyko Double Tape 24mm x 13m 1 pcs","Alat Tulis Kantor","21 Apr 26",4891],
+  [408,"4901301508850","Merries Tape Diapers S24 1 Pack","Kebutuhan Ibu & Bayi","21 Apr 26",71937],
+  [411,"7394376618222","Oatly Oat Milk Original Dairy Free 1000 ml","Susu & Olahan Susu","21 Apr 26",47197],
+  [418,"8999777007690","Hansaplast Aqua Protect Plester Luka Kedap Air 6 Sheets","Alat Kesehatan","21 Apr 26",13631],
+  [427,"8850006536223","Palmolive Naturals Cherry Blossom Body Wash Bottle Pump 1 Liter","Kebersihan Badan","21 Apr 26",87399],
+  [434,"793858","Daimaru Opp Lakban Coklat 2 inch x 90 yard 1 pcs","Alat Tulis Kantor","21 Apr 26",7402],
+  [435,"8993988345008","Joyko Gunting SC-838 16cm 1 pcs","Alat Tulis Kantor","21 Apr 26",6650],
+  [449,"8995229804145","Belfoods Sosis Ayam 6pcs 1 Pack","Makanan Beku","21 Apr 26",11700],
+  [454,"8997009510116","YOU-C 1000 Lemon Water 500 ml","Minuman","21 Apr 26",6795],
+  [458,"70177010768","Twinings Earl Grey Tea Celup 25 Bags","Sarapan","21 Apr 26",80475],
+  [462,"8997035601222","Oronamin C Drink 120 ml","Minuman","21 Apr 26",5253],
+  [473,"8992858527308","Hydro Coco Minuman Air Kelapa Original 250 ml","Minuman","21 Apr 26",6494],
+  [484,"8991038775553","Selection Cotton Buds 100 Stick","Perawatan Diri","21 Apr 26",4119],
+  [492,"93550178","Blackmores Koala Kids Body Shield 60 Kapsul","Vitamin","21 Apr 26",204098],
+  [494,"8997009510130","YOU-C 1000 Apple 140 ml","Minuman","21 Apr 26",5783],
+  [506,"74880030051","S&B Golden Curry Medium Hot 92 gram","Bahan Masak & Bumbu","21 Apr 26",36498],
+  [507,"8997009510055","YOU-C 1000 Orange 140 ml","Minuman","21 Apr 26",5784],
+  [510,"4901301509215","Magiclean Wiper Refill Pel Lantai 1 pcs","Tata Rumah","21 Apr 26",208957],
+  [520,"8992725910356","Listerine Cool Mint Antiseptic Mouthwash 500 ml","Perawatan Mulut","21 Apr 26",37298],
+  [525,"8992759214055","Nice Living Toilet Tissue Core Emboss 460 + 50 Helai 10 Rolls","Perawatan Rumah","21 Apr 26",33132],
+  [528,"8991038772194","Medisoft Cotton Balls 120 pcs","Perawatan Diri","21 Apr 26",10152],
+  [533,"8992772665049","Amunizer Vitamin C 1000 140 ml","Minuman","21 Apr 26",6494],
+  [542,"9556001047175","Nescafe Premium Original Coffee 220 ml","Minuman","21 Apr 26",8215],
+  [545,"9415007043072","Anchor Unsalted Butter Minidish 10 pcs x 7gr 70 gram","Susu & Olahan Susu","21 Apr 26",38798],
+  [547,"8994993011940","L'Oreal Paris Elseve Total Repair 5 Repairing Conditioner 155 ml","Shampoo & Conditioner","21 Apr 26",40283],
+  [550,"713049","Bakso Warisan Ibu Tahu Bakso Sapi Premium 8 pcs 500 gram","Makanan Beku","21 Apr 26",42053],
+  [551,"8993189700330","MamyPoko Royal Soft For Girls XXL24 Pants Diapers 1 Pack","Kebutuhan Ibu & Bayi","21 Apr 26",112520],
+  [561,"745314547215","Terasi Bangka No 1 Cap AB Asli Udang Toboali Premium 100 gram","Bahan Masak & Bumbu","21 Apr 26",9990],
+  [567,"5038483273173","Durex Play Massage Aloe Vera 2in1 Intimate Lube & Massage Gel 200 ml","Alat Kesehatan","21 Apr 26",140619],
+  [568,"8993200345038","Kanzler Smoked Beef 250 gram","Makanan Beku","21 Apr 26",37074],
+  [569,"8992736925134","Sasa Tepung Bumbu Serbaguna Original 210 gram","Bahan Masak & Bumbu","21 Apr 26",5396],
+  [570,"8992696521322","Nestle Carnation Susu Evaporasi 405 gram","Susu & Olahan Susu","21 Apr 26",16914],
+  [574,"8992725910400","Listerine Cool Mint Antiseptic Mouthwash 100 ml","Perawatan Mulut","21 Apr 26",8213],
+  [578,"8992779248603","Mr Muscle Pembersih Kamar Mandi Pouch 500 ml","Perawatan Rumah","21 Apr 26",12852],
+  [580,"8997012700023","Lem Aica Aibon 70 gram","Alat Tulis Kantor","21 Apr 26",15428],
+  [593,"8992727005135","Men's Biore Bright Energy Micro Bright Scrub Facial Wash 100 gram","Kebersihan Wajah","21 Apr 26",27611],
+  [606,"4987176000552","Vicks Vaporub Sakit Kepala & Flu 50 gram","Obat-obatan","21 Apr 26",38172],
+  [609,"8992727009430","Biore UV Aqua Rich Watery Essence SPF 50+ PA+++ Sunscreen 40 gram","Skincare","21 Apr 26",74447],
+  [610,"8886020219033","Bagus Lem Ajaib Perangkap Tikus 1 pcs","Perawatan Rumah","21 Apr 26",13153],
+  [615,"81364361693","Obat Batuk Cap Ibu dan Anak 150 ml","Obat-obatan","21 Apr 26",61491],
+  [618,"8992772586030","Adem Sari Ching Ku Sparkling Herbal Lemon 320 ml","Minuman","21 Apr 26",7157],
+  [622,"8998009010552","Ultra Milk Full Cream Susu UHT 200 ml","Susu & Olahan Susu","21 Apr 26",4938],
+  [625,"8991102987899","Tango Vanilla Wafer Pouch 99 gram","Biskuit","21 Apr 26",8618],
+  [633,"21200155772","3M Post-It Notes Yellow 1 Pack","Alat Tulis Kantor","21 Apr 26",10493],
+  [635,"8992304009167","Garnier Men Oil Control Anti-Shine Refreshing Foam Facial Wash 100 ml","Kebersihan Wajah","21 Apr 26",30693],
+  [652,"9415007043058","Anchor Salted Butter Minidish 7gr x 10 pcs 70 gram","Susu & Olahan Susu","21 Apr 26",38798],
+  [658,"4800361000239","Nestle Koko Krunch Cereal 300 gram","Sarapan","21 Apr 26",37729]
+];
+
+/* ═══ SIMULATION FALLBACK (seeded random) ═══ */
+function seededRand(s){let x=s;return()=>{x=(x*1664525+1013904223)&0xffffffff;return(x>>>0)/0xffffffff;};}
+function simPrice(cogs,i,s){
+  const r=seededRand(s*31+i*17);
+  const m=[0.18+r()*0.22,0.15+r()*0.25,0.20+r()*0.20,0.12+r()*0.30];
+  return Math.round(cogs*(1+m[i]));
+}
+
+/* ═══ HELPERS ═══ */
+function fmt(n){return 'Rp'+Math.round(n).toLocaleString('id-ID');}
+function fmtPct(p){return(p*100).toFixed(1)+'%';}
+function parseRp(v){if(!v&&v!==0)return null;const n=parseFloat(String(v).replace(/[^\d.]/g,''));return isNaN(n)?null:n;}
+function calcBest(cogs,avg){
+  let best=avg*1.05, m=(best-cogs)/best;
+  if(m<0.05){best=cogs/0.95;m=0.05;}
+  if(m>0.70){best=cogs/0.30;m=0.70;}
+  return{best,margin:m,status:m<=0.051?'low':m>=0.699?'overpriced':'optimized'};
+}
+
+/* ═══ SHEETS OVERRIDE MAP ═══ */
+let sheetsMap={};
+
+function buildData(){
+  return BASE.map(([id,sku,name,cat,tgl,cogs])=>{
+    const live=sheetsMap[String(sku)];
+    let shopee,tokped,blibli,alfa,updTgl,isLive;
+    if(live){
+      shopee=live.shopee||simPrice(cogs,0,id);
+      tokped=live.tokped||simPrice(cogs,1,id);
+      blibli=live.blibli||simPrice(cogs,2,id);
+      alfa  =live.alfa  ||simPrice(cogs,3,id);
+      updTgl=live.tgl||tgl; isLive=true;
+      if(live.cogs) cogs=live.cogs;
+      if(live.name) name=live.name;
+      if(live.cat)  cat =live.cat;
+    } else {
+      shopee=simPrice(cogs,0,id); tokped=simPrice(cogs,1,id);
+      blibli=simPrice(cogs,2,id); alfa  =simPrice(cogs,3,id);
+      updTgl=tgl; isLive=false;
+    }
+    const avg=(shopee+tokped+blibli+alfa)/4;
+    const{best,margin,status}=calcBest(cogs,avg);
+    return{id,sku:String(sku),name,cat,tgl:updTgl,cogs,shopee,tokped,blibli,alfa,avg,best,margin,status,isLive};
+  });
+}
+
+/* ═══ STATE ═══ */
+let data=buildData(), filteredData=[...data];
+let activeCat='semua', searchTerm='', sortCol=null, sortDir=1, page=0;
+const PG=15;
+
+/* ═══ GOOGLE SHEETS FETCH ═══ */
+async function loadFromSheets(){
+  const url=document.getElementById('sheets-url').value.trim();
+  if(!url){alert('Masukkan URL Google Sheets terlebih dahulu.');return;}
+  setBadge('loading','Mengambil data…');
+  document.getElementById('sync-time').textContent='';
+  try{
+    const res=await fetch(url);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const csv=await res.text();
+    parseSheetsCsv(csv);
+    const n=Object.keys(sheetsMap).length;
+    setBadge('live',`Live · ${n} SKU dari Sheets`);
+    const t=new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('sync-time').textContent='Sync '+t;
+    document.getElementById('footer-src').textContent=`${n} SKU harga real dari Google Sheets · Sisanya simulasi`;
+    try{localStorage.setItem('bpo_url',url);}catch(e){}
+  }catch(e){
+    setBadge('fallback','Gagal — cek URL & pastikan sudah Publish');
+    document.getElementById('sync-time').textContent='Error: '+e.message;
+  }
+  data=buildData(); rebuildFilters(); applyFilters();
+}
+
+function parseSheetsCsv(csv){
+  sheetsMap={};
+  const lines=csv.trim().split(/\r?\n/);
+  if(lines.length<2) return;
+  // normalize headers: lowercase, trim, remove quotes
+  const hdr=lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/['"]/g,'').replace(/\s+/g,'_'));
+  // flexible column mapping — matches file's actual column names
+  const fi=(names)=>{ for(const n of names){const i=hdr.indexOf(n);if(i>=0)return i;} return -1; };
+  const I={
+    sku  : fi(['sku_number','sku']),
+    tgl  : fi(['tgl_update','tgl','date','tanggal']),
+    name : fi(['product_name','nama_produk','name']),
+    cat  : fi(['l1_cat_name','l1_cat','category','kategori','cat']),
+    cogs : fi(['cogs_blended','cogs']),
+    shopee: fi(['shopee']),
+    tokped: fi(['tokopedia','tokped']),
+    blibli: fi(['blibli']),
+    alfa  : fi(['alfamart_indomart','alfamart','indomaret','alfa']),
+  };
+  for(let i=1;i<lines.length;i++){
+    const c=splitCsvLine(lines[i]);
+    const sku=c[I.sku]; if(!sku||sku==='') continue;
+    sheetsMap[sku.trim()]={
+      tgl   : I.tgl   >=0 ? c[I.tgl]||null    : null,
+      name  : I.name  >=0 ? c[I.name]||null   : null,
+      cat   : I.cat   >=0 ? c[I.cat]||null    : null,
+      cogs  : I.cogs  >=0 ? parseRp(c[I.cogs]): null,
+      shopee: I.shopee>=0 ? parseRp(c[I.shopee]):null,
+      tokped: I.tokped>=0 ? parseRp(c[I.tokped]):null,
+      blibli: I.blibli>=0 ? parseRp(c[I.blibli]):null,
+      alfa  : I.alfa  >=0 ? parseRp(c[I.alfa]) :null,
+    };
+  }
+}
+
+function splitCsvLine(line){
+  const res=[]; let cur='', inQ=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch==='"'){inQ=!inQ;}
+    else if(ch===','&&!inQ){res.push(cur.trim());cur='';}
+    else cur+=ch;
+  }
+  res.push(cur.trim());
+  return res;
+}
+
+function setBadge(type,text){
+  const el=document.getElementById('data-badge');
+  el.className='badge badge-'+type; el.textContent=text;
+}
+
+/* ═══ FILTERS ═══ */
+function rebuildFilters(){
+  const cats=['semua',...Array.from(new Set(data.map(d=>d.cat))).sort()];
+  const c=document.getElementById('filter-btns'); c.innerHTML='';
+  cats.forEach(cat=>{
+    const b=document.createElement('button');
+    b.className='filter-btn'+(cat===activeCat?' active':''); b.textContent=cat;
+    b.onclick=()=>{activeCat=cat;c.querySelectorAll('.filter-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');applyFilters();};
+    c.appendChild(b);
+  });
+}
+
+function applyFilters(){
+  page=0; let d=[...data];
+  if(activeCat!=='semua') d=d.filter(x=>x.cat===activeCat);
+  if(searchTerm){const q=searchTerm.toLowerCase();d=d.filter(x=>x.name.toLowerCase().includes(q)||x.sku.includes(q));}
+  if(sortCol) d.sort((a,b)=>typeof a[sortCol]==='string'?a[sortCol].localeCompare(b[sortCol])*sortDir:(a[sortCol]-b[sortCol])*sortDir);
+  filteredData=d; updateMetrics(d); renderTable(); updateCharts(); updateDlInfo();
+}
+
+function sortBy(col){
+  if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=1;}
+  document.querySelectorAll('thead th').forEach(t=>t.classList.remove('sort-asc','sort-desc'));
+  const th=document.getElementById('th-'+col); if(th)th.classList.add(sortDir===1?'sort-asc':'sort-desc');
+  applyFilters();
+}
+
+/* ═══ METRICS ═══ */
+function updateMetrics(d){
+  document.getElementById('total-sku').textContent=data.length;
+  document.getElementById('m-margin').textContent=fmtPct(d.reduce((s,x)=>s+x.margin,0)/(d.length||1));
+  document.getElementById('m-optimized').textContent=d.filter(x=>x.status==='optimized').length;
+  document.getElementById('m-overpriced').textContent=d.filter(x=>x.status==='overpriced').length;
+  document.getElementById('m-low').textContent=d.filter(x=>x.status==='low').length;
+}
+
+/* ═══ TABLE ═══ */
+function renderTable(){
+  const tbody=document.getElementById('tbl-body');
+  const slice=filteredData.slice(page*PG,(page+1)*PG);
+  if(!slice.length){tbody.innerHTML='<tr><td colspan="13" class="empty">Tidak ada data yang cocok</td></tr>';updatePager();return;}
+  const pill=s=>s==='optimized'?'pill-opt':s==='low'?'pill-low':'pill-over';
+  const ptxt=s=>s==='optimized'?'Optimized':s==='low'?'Low Margin':'Overpriced';
+  tbody.innerHTML=slice.map(d=>`<tr>
+    <td style="font-size:10px;color:var(--txt3);font-family:var(--mono);">${d.id}</td>
+    <td class="name-cell"><span class="src-dot ${d.isLive?'src-live':'src-sim'}" title="${d.isLive?'Harga real dari Google Sheets':'Harga simulasi'}"></span>${d.name}</td>
+    <td style="font-size:10px;color:var(--txt2);">${d.cat}</td>
+    <td style="font-size:10px;color:var(--txt3);font-family:var(--mono);white-space:nowrap;">${d.tgl}</td>
+    <td class="num">${fmt(d.cogs)}</td>
+    <td class="num" style="font-size:11px;">${fmt(d.shopee)}</td>
+    <td class="num" style="font-size:11px;">${fmt(d.tokped)}</td>
+    <td class="num" style="font-size:11px;">${fmt(d.blibli)}</td>
+    <td class="num" style="font-size:11px;">${fmt(d.alfa)}</td>
+    <td class="num" style="font-size:11px;color:var(--txt2);">${fmt(d.avg)}</td>
+    <td class="num best-price">${fmt(d.best)}</td>
+    <td class="num" style="font-size:11px;">${fmtPct(d.margin)}</td>
+    <td><span class="status-pill ${pill(d.status)}">${ptxt(d.status)}</span></td>
+  </tr>`).join('');
+  updatePager();
+}
+
+function updatePager(){
+  const total=filteredData.length,pages=Math.ceil(total/PG)||1;
+  const start=page*PG+1,end=Math.min((page+1)*PG,total);
+  let btns='';
+  for(let i=0;i<pages;i++){
+    if(pages<=8||i===0||i===pages-1||Math.abs(i-page)<=1)
+      btns+=`<button class="page-btn${i===page?' active':''}" onclick="goPage(${i})">${i+1}</button>`;
+    else if(Math.abs(i-page)===2)
+      btns+=`<span style="padding:4px 6px;font-size:11px;color:var(--txt3)">…</span>`;
+  }
+  document.getElementById('pager').innerHTML=`<span>${start}–${end} dari ${total} SKU</span><div class="page-btns">${btns}</div>`;
+}
+function goPage(p){page=p;renderTable();}
+
+/* ═══ CHARTS ═══ */
+let chartStatus=null;
+function updateCharts(){
+  const d=filteredData;
+  if(chartStatus)chartStatus.destroy();
+  chartStatus=new Chart(document.getElementById('chart-status'),{
+    type:'doughnut',
+    data:{labels:['Optimized','Overpriced','Low Margin'],
+      datasets:[{data:[d.filter(x=>x.status==='optimized').length,d.filter(x=>x.status==='overpriced').length,d.filter(x=>x.status==='low').length],
+        backgroundColor:['#1D9E75','#BA7517','#E24B4A'],borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.label}: ${ctx.raw} SKU`}}}}
+  });
+  // Category margin bars
+  const catList=[...new Set(data.map(x=>x.cat))].sort();
+  const catData=catList.map(c=>{
+    const items=d.filter(x=>x.cat===c); if(!items.length)return null;
+    return{cat:c,avg:items.reduce((s,x)=>s+x.margin,0)/items.length,count:items.length,liveN:items.filter(x=>x.isLive).length};
+  }).filter(Boolean).sort((a,b)=>b.avg-a.avg);
+  const maxM=Math.max(...catData.map(x=>x.avg));
+  const colors=['#185fa5','#1D9E75','#BA7517','#E24B4A','#7F77DD','#D85A30','#0F6E56','#854f0b',
+                '#185fa5','#1D9E75','#BA7517','#E24B4A','#7F77DD','#D85A30','#0F6E56','#854f0b',
+                '#185fa5','#1D9E75','#BA7517','#E24B4A','#7F77DD','#D85A30','#0F6E56','#854f0b',
+                '#185fa5','#1D9E75','#BA7517','#E24B4A'];
+  document.getElementById('cat-bars').innerHTML=catData.map((c,i)=>`
+    <div class="cat-bar">
+      <span class="cat-name" title="${c.cat}">${c.cat}</span>
+      <div class="cat-track"><div class="cat-fill" style="width:${(c.avg/maxM*100).toFixed(1)}%;background:${colors[i]}"></div></div>
+      <span class="cat-val">${fmtPct(c.avg)}</span>
+      <span class="cat-count">${c.count} SKU${c.liveN?` <span style="color:var(--green-txt)">·${c.liveN}↑</span>`:''}</span>
+    </div>`).join('');
+}
+
+/* ═══ DOWNLOAD ═══ */
+let dlScope='all';
+
+function setScope(s){
+  dlScope=s;
+  document.getElementById('scope-all').classList.toggle('active',s==='all');
+  document.getElementById('scope-filter').classList.toggle('active',s==='filter');
+  updateDlInfo();
+}
+
+function updateDlInfo(){
+  const n=dlScope==='all'?data.length:filteredData.length;
+  const label=dlScope==='all'?'semua':'hasil filter';
+  document.getElementById('dl-info').textContent=`${n} SKU (${label})`;
+}
+
+function getExportRows(){
+  const src=dlScope==='all'?data:filteredData;
+  return src.map(d=>({
+    'Product_ID'       : d.id,
+    'SKU_Number'       : d.sku,
+    'Product_Name'     : d.name,
+    'Kategori'         : d.cat,
+    'Tgl_Update'       : d.tgl,
+    'COGS_Blended'     : d.cogs,
+    'Shopee'           : d.shopee,
+    'Tokopedia'        : d.tokped,
+    'Blibli'           : d.blibli,
+    'Alfamart_Indomart': d.alfa,
+    'Avg_Pasar'        : Math.round(d.avg),
+    'Best_Price'       : Math.round(d.best),
+    'Margin_Pct'       : parseFloat((d.margin*100).toFixed(2)),
+    'Status'           : d.status==='optimized'?'Optimized':d.status==='low'?'Low Margin':'Overpriced',
+    'Sumber_Data'      : d.isLive?'Google Sheets':'Simulasi',
+  }));
+}
+
+function getTimestamp(){
+  const now=new Date();
+  return now.toISOString().slice(0,10).replace(/-/g,'');
+}
+
+function downloadCSV(){
+  const rows=getExportRows();
+  if(!rows.length){alert('Tidak ada data untuk diunduh.');return;}
+  const headers=Object.keys(rows[0]);
+  const escCell=v=>{
+    const s=String(v==null?'':v);
+    return s.includes(',')||s.includes('"')||s.includes('\n')?`"${s.replace(/"/g,'""')}"`:s;
+  };
+  const csv=[headers.join(','),...rows.map(r=>headers.map(h=>escCell(r[h])).join(','))].join('\r\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  triggerDownload(blob,`best_price_optimizer_${getTimestamp()}.csv`);
+}
+
+function downloadXLSX(){
+  if(typeof XLSX==='undefined'){alert('Library XLSX belum dimuat. Coba refresh halaman.');return;}
+  const rows=getExportRows();
+  if(!rows.length){alert('Tidak ada data untuk diunduh.');return;}
+
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet(rows);
+
+  // Column widths
+  const colW=[
+    {wch:10},{wch:18},{wch:50},{wch:22},{wch:12},
+    {wch:14},{wch:14},{wch:14},{wch:14},{wch:18},
+    {wch:14},{wch:14},{wch:12},{wch:12},{wch:16},
+  ];
+  ws['!cols']=colW;
+
+  // Header row style — bold
+  const range=XLSX.utils.decode_range(ws['!ref']);
+  for(let c=range.s.c;c<=range.e.c;c++){
+    const addr=XLSX.utils.encode_cell({r:0,c});
+    if(!ws[addr]) continue;
+    ws[addr].s={font:{bold:true},fill:{fgColor:{rgb:'F5F5F3'}},alignment:{horizontal:'center'}};
+  }
+
+  // Conditional color for Status column (column index 13)
+  const statusColIdx=13;
+  for(let r=1;r<=range.e.r;r++){
+    const addr=XLSX.utils.encode_cell({r,c:statusColIdx});
+    if(!ws[addr]) continue;
+    const v=ws[addr].v;
+    let rgb='';
+    if(v==='Optimized')  rgb='EAF3DE';
+    if(v==='Low Margin') rgb='FCEBEB';
+    if(v==='Overpriced') rgb='FAEEDA';
+    if(rgb) ws[addr].s={fill:{fgColor:{rgb}},font:{color:{rgb:rgb==='EAF3DE'?'3B6D11':rgb==='FCEBEB'?'A32D2D':'854F0B'}}};
+  }
+
+  XLSX.utils.book_append_sheet(wb,ws,'Best Price Data');
+
+  // Summary sheet
+  const opt=rows.filter(r=>r.Status==='Optimized').length;
+  const low=rows.filter(r=>r.Status==='Low Margin').length;
+  const over=rows.filter(r=>r.Status==='Overpriced').length;
+  const avgM=(rows.reduce((s,r)=>s+r.Margin_Pct,0)/rows.length).toFixed(2);
+  const summaryData=[
+    {Metrik:'Total SKU',Nilai:rows.length},
+    {Metrik:'Optimized',Nilai:opt},
+    {Metrik:'Low Margin',Nilai:low},
+    {Metrik:'Overpriced',Nilai:over},
+    {Metrik:'Avg Margin (%)',Nilai:parseFloat(avgM)},
+    {Metrik:'Tanggal Export',Nilai:new Date().toLocaleDateString('id-ID')},
+    {Metrik:'Scope',Nilai:dlScope==='all'?'Semua SKU':'Hasil Filter'},
+  ];
+  const ws2=XLSX.utils.json_to_sheet(summaryData);
+  ws2['!cols']=[{wch:20},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Summary');
+
+  XLSX.writeFile(wb,`best_price_optimizer_${getTimestamp()}.xlsx`);
+}
+
+function triggerDownload(blob,filename){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+/* ═══ MODAL ═══ */
+function openGuide() {document.getElementById('modal-overlay').classList.add('open');}
+function closeGuide(){document.getElementById('modal-overlay').classList.remove('open');}
+
+/* ═══ SEARCH ═══ */
+document.getElementById('search').addEventListener('input',e=>{searchTerm=e.target.value;applyFilters();});
+
+/* ═══ INIT ═══ */
+(function init(){
+  try{
+    const saved=localStorage.getItem('bpo_url');
+    if(saved){document.getElementById('sheets-url').value=saved;loadFromSheets();return;}
+  }catch(e){}
+  setBadge('fallback','Simulasi — belum terhubung ke Sheets');
+  rebuildFilters();applyFilters();
+})();
+</script>
+</body>
+</html>
